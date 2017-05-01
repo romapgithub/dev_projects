@@ -1,0 +1,621 @@
+<!doctype html>
+<!--[if lt IE 7]> <html class="ie6 oldie" lang="en"> <![endif]-->
+<!--[if IE 7]> <html class="ie7 oldie" lang="en"> <![endif]-->
+<!--[if IE 8]> <html class="ie8 oldie" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!--> <html lang="en"> <!--<![endif]-->
+<head>
+
+<meta charset=UTF-8>
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+<title>Email Preference</title>
+<meta name="description" content="Ethan Allen"/>
+<meta name="keywords" content="Ethan Allen"/>
+<!-- UI -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+      
+<script>
+var dURL = document.URL;
+function getParams() {//Get Name and (=) Values out of URL string after each &
+
+	var idx = dURL.indexOf('?');
+	var pnd	= dURL.indexOf('#');
+	var fparams = new Array();
+	if (idx > -1) {
+		if (pnd > idx) {
+			var pairs = dURL.substring(idx+1, (pnd - idx)).split('&');
+		} else {
+			var pairs = dURL.substring(idx+1, document.URL.length).split('&');
+		}
+		for (var i=0; i<pairs.length; i++) {
+			nameVal = pairs[i].split('=');
+			fparams[nameVal[0]] = nameVal[1];
+	}
+
+	}
+	return fparams;
+}
+
+var params = getParams(); 
+
+if (params["e"] != window.undefined){
+	email= unescape(params["e"]);
+	}
+	else {
+		email= '';
+		}
+
+
+if (params["tp"] != window.undefined){
+	tp= unescape(params["tp"]);
+	}
+	else {
+		tp= '';
+		}
+var email_tp='{(email_address)}';
+function precheck()
+{
+/*document.getElementById("frequency_preference1").checked = false;
+document.getElementById("frequency_preference3").checked = false;
+document.getElementById("frequency_preference4").checked = false;
+document.getElementById("unsubscribe_me").checked = false;
+*/
+var x = document.getElementById('prefcontainer');
+if(email!=''){
+
+document.subscribe.s_pref_version.value='web';
+}
+else{
+$("#prefheader").show();
+$("#pref-footer").show();
+//$('#prefcontainer').css('width','1400px');
+
+document.subscribe.s_pref_version.value='email';
+}
+     var freq_pref = '{(frequency_preference)}';
+//alert('freq_pref='+freq_pref);
+     var unsub_stat = '{(email_address_sp1_status_id)}';
+//alert('unsub='+unsub_stat );
+    var freq1 = document.getElementById("frequency_preference1");
+    var freq3 = document.getElementById("frequency_preference3");
+    var freq4 = document.getElementById("frequency_preference4");
+    var freq5 = document.getElementById("frequency_preference5");
+    var unsub = document.getElementById("unsubscribe_me");
+     if(unsub_stat == '1500')
+            {
+                freq1.checked = false;
+                freq3.checked = false;
+                freq4.checked = false;
+            	freq5.checked = false;
+             unsub.checked = true;
+                 }
+           else if(freq_pref == 'A')
+            {
+                freq1.checked = true;
+                freq3.checked = false;
+                freq4.checked = false;
+            	freq5.checked = false;
+                unsub.checked = false;
+             }
+        
+            else if(freq_pref == 'W')
+            {
+            	freq3.checked = true;
+                freq4.checked = false;
+                freq1.checked = false;
+            	freq5.checked = false;
+                unsub.checked = false;
+            }
+            else if(freq_pref == 'M')
+            {
+            	freq4.checked = true;
+                freq3.checked = false;
+                freq1.checked = false;
+            	freq5.checked = false;
+                unsub.checked = false;
+             }
+           else if(freq_pref == 'D')
+            {
+            	freq5.checked = true;
+                freq4.checked = false;
+                freq1.checked = false;
+                freq3.checked = false;
+                unsub.checked = false;
+            }
+
+}
+function uncheck(check)
+{
+    var freq1 = document.getElementById("frequency_preference1");
+    var freq3 = document.getElementById("frequency_preference3");
+    var freq4 = document.getElementById("frequency_preference4");
+    var freq5 = document.getElementById("frequency_preference5");
+    var unsub = document.getElementById("unsubscribe_me");
+        if(check == 1)
+        {
+            freq3.checked = false;
+            freq4.checked = false;
+            freq5.checked = false;
+            unsub.checked = false;
+        }
+         else if(check == 3)
+        {
+            freq4.checked = false;
+            freq1.checked = false;
+            freq5.checked = false;
+            unsub.checked = false;
+        }
+        else if(check == 4)
+        {
+            freq3.checked = false;
+            freq1.checked = false;
+            freq5.checked = false;
+            unsub.checked = false;
+         }
+        else if(check == 5)
+        {
+            freq5.checked = true;
+            freq1.checked = false;
+            freq3.checked = false;
+            freq4.checked = false;
+            unsub.checked = false;
+         }
+        else if(check == 6)
+        {
+            freq1.checked = false;
+            freq3.checked = false;
+            freq4.checked = false;
+            freq5.checked = false;
+             }
+
+
+}
+
+function SubmitVal(){
+  var unsub = document.getElementById("unsubscribe_me");
+    var freq1 = document.getElementById("frequency_preference1");
+ //var freq2 = document.getElementById("frequency_preference2");
+    var freq3 = document.getElementById("frequency_preference3");
+    var freq4 = document.getElementById("frequency_preference4");
+var freq5 = document.getElementById("frequency_preference5");
+var first = document.subscribe.s_first_name.value;
+var last= document.subscribe.s_last_name.value;
+var zip= document.subscribe.s_zip_code.value;
+if(email !=''){
+document.subscribe.s_email_address.value=email;
+}
+if(email!='' && unsub.checked==true && freq1.checked==false && freq3.checked==false && freq4.checked==false && freq5.checked==false){
+
+var url1="https://ats.eccmp.com/ats/show.aspx?cr=797&fm=22&e="+email+"&con=USA"+"&f="+first+"&l="+last+"&z="+zip;
+         document.subscribe.cp.value=url1;
+
+return false;
+        }
+else if(tp!='' && unsub.checked==true && freq1.checked==false && freq3.checked==false && freq4.checked==false && freq5.checked==false){
+var url2="https://ats.eccmp.com/ats/show.aspx?cr=797&fm=22&tp="+tp;
+        document.subscribe.cp.value=url2;
+return false;
+        }
+else{
+   document.subscribe.s_email_address_sp1_status_id.value=''; 
+   document.subscribe.cp.value='';
+}
+
+}
+</script>
+
+<style>
+#full-size{
+    position: absolute;
+    top:0;
+    bottom:0;
+    right:0;
+    left:0;
+    overflow:hidden;
+	}
+#prefcontainer{
+    margin: 0 auto;
+    }
+
+
+#prefcontainer ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0 0 15px 0;
+	border-bottom: 1px #ccc solid;
+}
+
+#prefcontainer li {
+    display: inline;
+}
+
+#prefcontainer li a {
+    color: #000;
+    padding: 14px 25px;
+    text-decoration: none;
+	font-size: 0.85em;
+font-family: "Avenir LT W02 45 Book",Arial,sans-serif;
+
+}
+
+#prefcontainer li a:hover {
+    font-weight: bold;
+}
+
+#logo{
+	margin:27px
+	}
+
+	#logo img{width:350px;}
+
+#email-preference-container{
+font-family:Arial, Helvetica, sans-serif;
+font-size:14px;
+width: 980px;
+margin:0 auto;
+position: relative;
+margin-top:2px;
+}
+
+#email-preference-container p{
+    padding-top:25px;
+    clear:both;
+}
+
+
+#email-preference-container h1{
+font-family: "Avenir LT W02 45 Book",Arial,sans-serif;
+font-size:25px;
+font-weight: normal;
+margin:25px 0 35px 0;
+text-align: center;
+border-bottom: 1px #ccc solid;
+padding: 0 0 35px 0;
+color: #666;
+letter-spacing: 2px;
+
+}
+
+#email-preference-container input{
+    height:21px;
+    width:100%;
+}
+
+#email-preference-title{
+    font-family:"Avenir LT W02 45 Book",Arial,sans-serif;
+    font-size:28px;
+
+}
+
+#email-preference-container img{
+    margin-top:2px;
+
+}
+
+.req{
+    font-style:italic;
+    font-size:11px;
+
+}
+
+.missing-info{
+    color:#e80000;
+    font-size:13px;
+}
+
+.radio{
+    width:30px !important;
+    float:left;
+}
+
+#submit{
+    width:77px !important;
+    height:25px !important;
+    color:#fff;
+    background-color:#A29061;
+    margin-left:0px;
+    cursor:pointer;
+    padding:0px;
+    border:none;
+}
+
+.pref-left{
+
+
+    float:left;
+    width:475px;
+    margin-right:10px;
+	margin: 0 10px 55px 0;
+
+
+}
+
+.pref-right{
+
+    float:left;
+	margin: 0 50px 0 0;
+
+
+}
+	#pref-footer{
+		font-family:"Avenir LT W02 45 Book",Arial,sans-serif;
+		width: 100%;
+		clear: both;
+		font-size: 11px;
+			border-top: 1px #ccc solid;
+
+	}
+
+	#pref-footer .copy {
+    float: right;
+    text-align: right;
+	margin: 33px 0 0;
+}
+
+
+@media screen and (max-width: 860px) {
+.logo{
+ overflow: scroll;
+position: fixed;
+}
+    .pref-right{
+        display: none;
+    }
+
+    .pref-left{
+        width:100%;
+        margin:0;
+        padding:0;
+
+    }
+}
+
+
+@media screen and (max-width: 860px) {
+#email-preference-container{
+font-family:Arial, Helvetica, sans-serif;
+font-size:12px;
+width: 100%;
+margin:0 auto;
+position: relative;
+margin-top:2px;
+
+	}
+}
+
+
+@media screen and (max-width: 860px) {
+	#prefcontainer{width:100%;
+	margin: 0 auto;
+	}
+
+	#prefcontainer ul {
+    display: none;
+}
+
+	#logo{
+	margin:3px
+	}
+
+	#logo img{
+	width:330px;
+	}
+
+	#submit{
+    width:77px !important;
+    height:25px !important;
+    color:#fff;
+    background-color:#A29061;
+    margin: 20px 0 0 0;
+    cursor:pointer;
+    padding:0px;
+    border:none;
+}
+
+
+		#pref-footer .copy {
+    float: right;
+    text-align: right;
+	margin: 35px 0 0;
+}
+
+#email-preference-container h1{
+font-family: "Avenir LT W02 45 Book",Arial,sans-serif;
+font-size:17px;
+font-weight: normal;
+margin:5px 0 5px 0;
+text-align: center;
+padding: 0;
+color: #666;
+letter-spacing: 2px;
+	    border:none;
+
+}
+
+}
+
+
+</style>
+
+</head>
+<body class="null" onload="precheck();">
+<div class="full-size">
+<div id="prefcontainer">
+<div id="prefheader" style="display:none">
+<div id="logo"><a href="http://www.ethanallen.com/"><img src="https://snamwpm.eccmp.com/wpm/797/ContentUploads/Forms/Preference/ea_logo_black.jpg"/></a></div>
+
+<ul>
+	<li><a href="http://www.ethanallen.com/on/demandware.store/Sites-ethanallen-us-Site/en_US/Home-Show?site=disney">ETHAN ALLEN | DISNEY</a></li>
+	<li><a href="http://www.ethanallen.com/en_US/shop-whats-new">WHAT'S NEW</a></li>
+	<li><a href="http://www.ethanallen.com/en_US/shop-furniture">FURNITURE</a></li>
+	<li><a href="http://www.ethanallen.com/en_US/shop-decor">DECOR</a></li>
+	<li><a href="http://www.ethanallen.com/en_US/shop-gifts">GIFTS</a></li>
+	<li><a href="http://www.ethanallen.com/en_US/shop-bedding">BEDDING</a></li>
+	<li><a href="http://www.ethanallen.com/en_US/shop-lighting">LIGHTING</a></li>
+	<li><a href="http://www.ethanallen.com/en_US/shop-rugs-drapery">RUGS & DRAPERY</a></li>
+	<li><a href="http://www.ethanallen.com/en_US/shop-outdoor">OUTDOOR</a></li>
+	<li><a style="color:red;" href="http://www.ethanallen.com/en_US/shop-clearance">CLEARANCE</a></li>
+
+</ul>
+<br/>
+<br/>
+		</div>
+<form name="subscribe" method="post" accept-charset="utf-8"  action="go.aspx">
+	<input type="hidden" name="cr" value="{(CustomerID)}" />
+	<input type="hidden" name="fm" value="{(FormID)}" />
+	<input type="hidden" name="sb" value="{(SubmissionID)}" />
+	<input type="hidden" name="ri" value="{(PkID)}" />
+	<input type="hidden" name="mg" value="{(MessageID)}" />
+	<input type="hidden" name="cn" value="{(CampaignID)}" />
+<input type="hidden" name="s_email_address" value="{(email_address)}" />
+<input type="hidden" id="unsub_status" name="s_email_address_sp1_status_id" value="{(email_address_sp1_status_id)}" />
+<input type="hidden" name="cp"  id="cp_val"  />
+<input type="hidden" name="s_pref_version" />
+
+<div id="email-preference-container">
+      
+           <h1>HERE FROM US AS LITTLE OR AS MUCH AS YOU LIKE<br/> <span style="font-size: 17px;">EMAIL PREFERENCE CENTER</span></h1>
+      
+       <div class="pref-right">
+        <img src="https://snamwpm.eccmp.com/wpm/797/ContentUploads/Forms/Preference/preference_center_image.jpg" />
+       </div>   
+             <div class="pref-left">
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    <td colspan="2" height="4" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="1" align="left" bgcolor="#d3d8dc" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="8" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="2" height="29" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td valign="middle" align="left" style="padding:0px 0px 0px 0px;" width="150">
+                      First Name: 
+                    </td>
+                    <td align="left" style="padding:0px 0px 0px 0px;" width="325"><input type="text" id="firstname" name="s_first_name" value="{(first_name)}">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="20" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                <tr>
+                     <td valign="middle" align="left" style="padding:0px 0px 0px 0px;">
+                    <label for="lastname">Last Name: </label>
+                    </td>
+                    <td align="left" style="padding:0px 0px 0px 0px;"><input type="text" id="lastname" name="s_last_name" value="{(last_name)}">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="20" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                <tr>
+                      <td valign="middle" align="left" style="padding:0px 0px 0px 0px;">
+                    <label for="email">Email: </label>
+                    </td>
+                    <td align="left" style="padding:0px 0px 0px 0px;"><script language="javascript">if(email!=''){document.write(''+email);}else{document.write(''+email_tp);}</script>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="20" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td valign="middle" align="left" style="padding:0px 0px 0px 0px;">
+                    <label for="postalcode">Postal Code: </label>
+                    </td>
+                    <td align="left" style="padding:0px 0px 0px 0px;"><input type="text" id="postalcode" name="s_zip_code" value="{(zip_code)}">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="20" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+
+                <tr>
+                    <td colspan="2" height="20" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                 <tr>
+                    <td colspan="2" align="left" style="padding:0px 0px 0px 0px;">
+                    How often would you like to hear from us?
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="20" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                 <tr>
+                    <td colspan="2" align="left" style="padding:0px 0px 0px 0px;">
+<input onClick="uncheck(1);" type="radio" class="radio" id="frequency_preference1" name="s_frequency_preference" value="A"><span style="margin-top: 5px;position:absolute">Please send me all email communications</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="10" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                 <tr>
+                    <td colspan="2" align="left" style="padding:0px 0px 0px 0px;"><input onClick="uncheck(3);" type="radio" class="radio" name="s_frequency_preference" id="frequency_preference3" value="W"><span style="margin-top: 5px;position:absolute">Once a week</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="10" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                 <tr>
+                    <td colspan="2" align="left" style="padding:0px 0px 0px 0px;"><input onClick="uncheck(4);" type="radio" class="radio" name="s_frequency_preference" id="frequency_preference4"  value="M"><span style="margin-top: 5px;position:absolute">Twice a month</span>
+                    </td>
+                </tr>
+ <tr>
+                    <td colspan="2" height="10" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td colspan="2" align="left" style="padding:0px 0px 0px 0px;"><input onClick="uncheck(5);" type="radio" class="radio" name="s_frequency_preference" id="frequency_preference5"  value="D"><span style="margin-top: 5px;position:absolute">Ethan Allen | Disney emails only</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="10" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                 <tr>
+                    <td colspan="2" align="left" style="padding:0px 0px 0px 0px;">
+<input  onClick="uncheck(6);" type="radio" class="radio" id="unsubscribe_me" name="unsubscribe_me" value="U">
+<span style="margin-top: 5px;position:absolute">Please remove me from your email communications list</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" height="20" align="left" style="padding:0px 0px 0px 0px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2" align="left" style="padding:0px 0px 0px 0px;"><input id="submit" type="submit" value="Submit" onClick="SubmitVal();">
+                    </td>
+                </tr>
+            </table>
+            <p style="font-family:Arial, Helvetica, sans-serif;font-size:14px;">You may still receive emails from your local designer and/or Design Center regarding special in-store only events.</p>
+        </div>
+            
+       
+</div>
+	
+
+</form>
+<div id="pref-footer" style="display:none;"><p class="copy">&#169;2017 Ethan Allen Global, Inc.
+Disney elements &#169;Disney</p></div>
+</div>
+</body>
+</html>
+
