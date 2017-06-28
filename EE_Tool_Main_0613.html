@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="-1" />
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<script src="https://snamwpm.eccmp.com/wpm/100169/js/jquery.cookie.js"></script>
+<script src="https://snamwpm.eccmp.com/wpm/100169/js/ccmpforms-citiv2.js"></script>
+
+<script type="text/javascript">
+var streamclick='';
+function cookieCheck(){
+    if (document.cookie.indexOf("sessionid") < 0) {
+	location.href="https://fm.info4.citi.com/ats/show.aspx?cr=100169&fm=39";
+    }
+}
+
+function loadPids(){
+    $.get('https://fm.info4.citi.com/ats/url.aspx?cr=100169&wu=21&STID=1')
+	.done(function(data) {
+	    $('#loading-small').hide();
+	    var resp = $.parseJSON(data.match(/\{.*\}/)[0]);
+	    $.each(resp.pids.sort((function(a,b){return a - b})), function(i, pid) {
+		$("select[name=s_ct_product_id_ch] ").append("<option value='" + pid + "' >" + pid + "</option>");
+	    })
+	});
+}
+
+function pidOnchange() {
+	var pid=$("select[name=s_ct_product_id_ch]").val();
+	if(pid) {
+	    $('#loading-small').show();
+	    $("select[name=s_ax_creative_assignment] option:not(:first)").remove();
+	    $.get('https://fm.info4.citi.com/ats/url.aspx?cr=100169&wu=64&PID='+pid)
+	    .done(function(data) {
+		$('#loading-small').hide();
+		var resp = $.parseJSON(data.match(/\{.*\}/)[0]);
+		$.each(resp.cids.sort(), function(i, cid) {
+		    $("select[name=s_ax_creative_assignment]").append("<option value='" + cid + "' >" + cid + "</option>");
+                   
+		})
+	    });
+
+	}
+};
+
+
+function follow_through(code, related, cblock, retry) {
+    if(retry > 3)
+	return;
+
+    $.get('https://fm.info4.citi.com/ats/url.aspx?cr=100169&wu=28&ccd='+code)
+	.then(function(data) {
+		try {
+		    var resp = $.parseJSON(data.match(/\{.*\}/)[0]);
+		}
+		catch(err) {
+		    console.log("error on rest content:" + code);
+		    var dfr = new $.Deferred();
+		    return dfr.reject(this).promise();
+		}
+		if(resp) {
+		    if(resp.name) {
+			if(resp.related && related) {
+			    var relatedIds = resp.related.split(',');
+                           
+			    $.each(relatedIds, function(i, val) {
+				var matches = val.match(/^(?:AW_|AO_04_)(\d+)_([\w_]+)/);
+				if(matches[1] && matches[2]) {
+					var pid = matches[1];
+					var cid = matches[2];
+                                     
+					$("<a></a>", {text:pid+'_'+cid+' ', href:'#', onclick:"loadContent(" + "'" + pid + "'" + "," + "'" + cid + "'" + ")" }).appendTo(related);
+				    }
+				});
+			}
+			if(resp.rid && cblock) {
+			    ccmp.content_block(resp.rid, function(data) {
+			    cblock.html(data.replace(/http:/g, 'https:'));});
+			}
+		    }
+		}
+	    })
+	.fail(function() {
+		console.log("retrying" + code);
+		follow_through(code, related, cblock, retry++);
+	    });
+}
+
+function formSubmit(pid, cid) {
+    var pid = $("select[name=s_ct_product_id_ch]").val();
+    var cid = $("select[name=s_ax_creative_assignment]").val();
+    if(pid && cid)
+	loadContent(pid, cid);
+}
+
+function loadContent(pid, cid) {
+    $(".stream").hide();
+    $('.content').hide();
+    $('.content').empty();
+
+    $("select[name=s_ct_product_id_ch]").val('')
+    $("select[name=s_ax_creative_assignment]").val('');
+
+    $('#loading-small').show();
+    $('#Proof').hide();
+   if(pid && cid) {
+	$.get('https://fm.info4.citi.com/ats/url.aspx?cr=100169&wu=63&pid=' + pid + '&caid=' + cid)
+	    .done(function(data) {
+		    var resp = $.parseJSON(data.match(/\{.*\}/)[0]);
+
+		    if(resp.pid && resp.cid) {
+			$("#main-name").text(resp.pid + "  " + resp.cid);
+			$("#main-name").show();
+			var streams = resp.stream.split('|');
+                       streamclick=streams[0];
+			$("#stream-tab").empty();
+			$("#stream-tab").append("<ul id='stream-list'></ul>");
+
+			
+			$.each(streams, function (index, value) {
+			    var qstream = "'" + value + "'"+","+"'" +pid+"'" +","+"'" +cid+"'";
+			    $("<li></li>").append($("<a></a>", {text:value, href:'#', onclick:"streamOnclick("+qstream+")" })).appendTo($("#stream-list"));
+
+			    if(resp.preheader) {
+				$('#'+ value +'-preheader').show();
+				$('#'+ value +'-preheader .content').show();
+				$('#'+ value +'-preheader-title').html("<b>Preheader</b>: " + resp.preheader);
+				follow_through(value + '_' + resp.preheader, $('#'+ value +'-preheader-related'),  $('#'+ value +'-preheader-html'), 0);
+			    }
+			    if(resp.header) {
+				$('#'+ value +'-header').show();
+				$('#'+ value +'-header .content').show();
+				$('#'+ value +'-header-title').html("<b>Header</b>: " +resp.header);
+				follow_through(value + '_' + resp.header, $('#'+ value +'-header-related'), $('#'+ value +'-header-html'), 0);
+			    }
+			   if(resp.subheader) {
+				$('#'+ value +'-subheader').show();
+				$('#'+ value +'-subheader .content').show();
+				$('#'+ value +'-subheader-title').html("<b>SubHeader</b>: " +resp.subheader);
+				follow_through(value + '_' + resp.subheader, $('#'+ value +'-subheader-related'), $('#'+ value +'-subheader-html'), 0);
+			    }
+			   
+			    if(resp.body) {
+				$('#'+ value +'-body').show();
+				$('#'+ value +'-body .content').show();
+				$('#'+ value +'-body-title').html("<b>Body</b>: " +resp.body);
+				follow_through(value + '_' + resp.body, $('#'+ value +'-body-related'), $('#'+ value +'-body-html'), 0);
+			    }
+			    if(resp.subbody) {
+				$('#'+ value +'-subbody').show();
+				$('#'+ value +'-subbody .content').show();
+				$('#'+ value +'-subbody-title').html("<b>SubBody</b>: " +resp.subbody);
+				follow_through(value + '_' + resp.subbody, $('#'+ value +'-subbody-related'),  $('#'+ value +'-subbody-html'), 0);
+			    }
+                            if(resp.rewardsbar) {
+				$('#'+ value +'-rewardsbar').show();
+				$('#'+ value +'-rewardsbar .content').show();
+				$('#'+ value +'-rewardsbar-title').html("<b>Rewards Bar</b>: " +resp.rewardsbar);
+				follow_through(value + '_' + resp.rewardsbar, $('#'+ value +'-rewardsbar-related'), $('#'+ value +'-rewardsbar-html'), 0);
+			    }
+                            if(resp.disclosures) {
+				$('#'+ value +'-disclosures').show();
+				$('#'+ value +'-disclosures .content').show();
+				$('#'+ value +'-disclosures-title').html("<b>Disclosures</b>: " +resp.disclosures);
+				follow_through(value + '_' + resp.disclosures, $('#'+ value +'-disclosures-related'), $('#'+ value +'-disclosures-html'), 0);
+			    }
+			    /*if(resp.legal) {
+				$('#'+ value +'-legal-title').html("<b>Legal</b>: " +resp.legal);
+				$('#'+ value +'-legal').show();
+				$('#'+ value +'-legal-title').show();
+				$('#'+ value +'-legal-related').show();
+				$('#'+ value +'-legal-html').show();
+
+				follow_through(value + '_' + resp.legal, $('#'+ value +'-legal-related'),  $('#'+ value +'-legal-html'), 0);
+
+				var sublegals = $.grep(resp.sublegal, function(n, i) {return n});
+				if(sublegals.length > 1) {
+				    var clds = $('#'+value+'-legal-clds');
+				    $('#'+value+'-legal-clds').show();
+				    $.each(sublegals, function(indy, val) {
+					    var lgd = $("<div></div>").appendTo(clds);
+					    follow_through(value + '_' + val, null,  lgd, 0);
+				    })
+				}
+			    }*/
+
+			})
+
+			$("#stream-list li").first().addClass("active");
+			$('#' + streams[0]).show();
+			$('#stream-tab').show();
+                        
+                          var prooflink="'"+"https://fm.info4.citi.com/ats/url.aspx?cr=100169&wu=62&pid=" + pid + "&cid=" + cid+"&st="+streamclick+"'"; 
+   
+                        //alert(streamclick);
+                         $('<a id="prooflink" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;" href="javascript:window.open('+prooflink+',\'Proof Preview\',\'width=600,height=400\')">Proof Preview</a>').appendTo('#Proof');
+                        $('#Proof').show();
+                         
+			$('#loading-small').hide();
+		    }
+	    });
+    }
+}
+
+function streamOnclick(stream, pid, cid) {
+ $('#Proof').hide();
+    $('.stream').hide();
+    $('.active').removeClass('active');
+    $("#stream-list li:contains("+stream+")").addClass('active');
+    $('#'+stream).show();
+    streamclick=stream;
+ var prooflink_click="'"+"https://fm.info4.citi.com/ats/url.aspx?cr=100169&wu=62&pid=" + pid + "&cid=" + cid+"&st="+streamclick+"'"; 
+  var replace_link="javascript:window.open("+prooflink_click+",\'Proof Preview\',\'width=600,height=400\')";
+    $('#prooflink').attr("href", replace_link);
+                        $('#Proof').show();
+
+}
+</script>
+<style type="text/css">
+html {
+    font-family:Arial, Helvetica, sans-serif; 
+    margin-left: auto;
+    margin-right: auto;
+    overflow-x:hidden;
+    width: 768px;
+}
+a{
+    color:blue
+}
+.box {
+    border:solid 1px #000;
+    width:700px;
+    font-family:Arial, Helvetica, sans-serif; 
+    font-size:12px;
+    padding: 5px;
+    word-wrap:break-word;
+}
+.controls {
+    width: 215px;
+    display: inline-block;
+}
+.titlemain {
+    font-family:Arial, Helvetica, sans-serif; 
+    font-size:24px;
+    color:#005aa5;
+    display:inline-block;
+}
+.title {
+    font-family:Arial, Helvetica, sans-serif; 
+    font-size:14px;
+    color:#005aa5;
+}
+.var {
+    color:#FF6363;
+}
+.related {
+    font-family:Arial, Helvetica, sans-serif; 
+    font-size:12px;
+    display:block;
+    width:700px;
+    word-wrap:break-word;
+
+}
+.related a {
+    color: black;
+    margin: 3px 7px 3px 0px;
+    display: inline-block;
+}
+.legalcontains{
+    font-family:Arial, Helvetica, sans-serif; 
+    font-size:12px;
+    display:block;
+    width:700px;
+    word-wrap:break-word;
+}
+.fontcont{
+    font-family:Arial, Helvetica, sans-serif; 
+    font-size:14px;
+}
+.loading-large {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 100px;
+}
+.content {
+    margin: 10px 0px;
+    word-wrap: normal;
+}
+.bkimage {
+    background: #F8F8F8;
+    display: inline-block;
+    min-width: auto;
+}
+#select-cid {
+    width:70px;
+}
+#stream-tab {
+    display: inline-block;
+}
+#stream-tab ul {
+    list-style-type: none;
+    margin: 0px;
+    padding: 0px;
+}
+#stream-tab li {
+    background-color: #efefef;
+    display: inline-block;
+    line-height: 40px;
+    width: 120px;
+    height: 40px;
+    text-align: center;
+}
+#stream-tab a {
+    color:black;
+    text-decoration: none;
+}
+.active {
+    background-color: #FFF !important;
+}
+</style>
+</head>
+<body onload="cookieCheck();loadPids();">
+<div id="controls" class="controls">
+    <img src="https://wpm.eccmp.com/wpm/100169/images/citi.gif"> <br/><br/>
+    <select name="s_ct_product_id_ch" id="select-pid" size="1" onchange="pidOnchange()">
+	<option value="" >PID</option>
+    </select>
+    <select name="s_ax_creative_assignment" id="select-cid" size="1">
+	<option value="" >CID</option>
+    </select>
+    <input name="button" type="button" value="Submit" onclick="formSubmit();" />
+    <img id="loading-small" src="https://wpm.eccmp.com/wpm/100169/images/ajax-loader.gif" />
+</div>
+<div id="stream-tab" class="content"></div>
+<br />
+<div id="Proof" class="content"></div>
+<br />
+<div id="main-name" class="titlemain content"></div>
+<div id="AO_04" class="stream" style="width:800px; display:none;" >
+    <div id="AO_04-preheader" style="display:none">
+	<div id="AO_04-preheader-title" class="title content"></div>
+	<div id="AO_04-preheader-related" class="related content"></div>
+	<div id="AO_04-preheader-html" class="content"></div>
+    </div>
+    <br />
+    <div id="AO_04-header" style="display:none">
+	<div id="AO_04-header-title" class="title content"></div>
+	<div id="AO_04-header-related" class="related content"></div>
+	<div id="AO_04-header-html" class="content"></div>
+    </div>
+    <br />
+<div id="AO_04-subheader" style="display:none">
+	<div id="AO_04-subheader-title" class="title content"></div>
+	<div id="AO_04-subheader-related" class="related content"></div>
+	<div id="AO_04-subheader-html" class="content"></div>
+    </div>
+    <br />
+    <div id="AO_04-body" style="display:none">
+	<div id="AO_04-body-title" class="title content"></div>
+	<div id="AO_04-body-related" class="related content"></div>
+	<div id="AO_04-body-html" class="content box"></div>
+    </div>
+    <br />
+      <div id="AO_04-subbody" style="display:none">
+	<div id="AO_04-subbody-title" class="title content"></div>
+	<div id="AO_04-subbody-related" class="related content"></div>
+	<div id="AO_04-subbody-html" class="content"></div>
+    </div>
+    <br />
+  <div id="AO_04-rewardsbar" style="display:none">
+	<div id="AO_04-rewardsbar-title" class="title content"></div>
+	<div id="AO_04-rewardsbar-related" class="related content"></div>
+	<div id="AO_04-rewardsbar-html" class="content"></div>
+    </div>
+    <br />
+    <div id="AO_04-disclosures" style="display:none">
+	<div id="AO_04-disclosures-title" class="title content"></div>
+	<div id="AO_04-disclosures-related" class="related content"></div>
+	<div id="AO_04-disclosures-html" class="content box"></div>
+	
+    </div>
+</div>
+<div id="AW" class="stream" style="width:800px; display:none;" >
+    <div id="AW-preheader" style="display:none">
+	<div id="AW-preheader-title" class="title content"></div>
+	<div id="AW-preheader-related" class="related content"></div>
+	<div id="AW-preheader-html" class="content"></div>
+    </div>
+    <br />
+    <div id="AW-header" style="display:none">
+	<div id="AW-header-title" class="title content"></div>
+	<div id="AW-header-related" class="related content"></div>
+	<div id="AW-header-html" class="content"></div>
+    </div>
+    <br />
+    <div id="AW-subheader" style="display:none">
+	<div id="AW-subheader-title" class="title content"></div>
+	<div id="AW-subheader-related" class="related content"></div>
+	<div id="AW-subheader-html" class="content"></div>
+    </div>
+    <br />
+
+    <div id="AW-body" style="display:none">
+	<div id="AW-body-title" class="title content"></div>
+	<div id="AW-body-related" class="related content"></div>
+	<div id="AW-body-html" class="content box"></div>
+    </div>
+    <br />
+    <div id="AW-subbody" style="display:none">
+	<div id="AW-subbody-title" class="title content"></div>
+	<div id="AW-subbody-related" class="related content"></div>
+	<div id="AW-subbody-html" class="content"></div>
+    </div>
+    <br />
+  <div id="AW-rewardsbar" style="display:none">
+	<div id="AW-rewardsbar-title" class="title content"></div>
+	<div id="AW-rewardsbar-related" class="related content"></div>
+	<div id="AW-rewardsbar-html" class="content"></div>
+    </div>
+    <br />
+    <div id="AW-disclosures" style="display:none">
+	<div id="AW-disclosures-title" class="title content"></div>
+	<div id="AW-disclosures-related" class="related content"></div>
+	<div id="AW-disclosures-html" class="content box"></div>
+	
+    </div>
+</div>
+</body>
+</html>

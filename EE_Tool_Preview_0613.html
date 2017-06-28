@@ -1,0 +1,833 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=4" />
+<meta content="telephone=no" name="format-detection" />
+<title>Citi Cards Email</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<script src="https://snamwpm.eccmp.com/wpm/100169/js/jquery.cookie.js"></script>
+<script src="https://snamwpm.eccmp.com/wpm/100169/js/ccmpforms-citiv2.js"></script>
+
+<script type="text/javascript">
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+function cookieCheck(){
+    if (document.cookie.indexOf("sessionid") < 0) {
+	location.href="https://fm.info4.citi.com/ats/show.aspx?cr=100169&fm=39";
+    }
+}
+
+function loadPids(){
+    $.get('https://fm.info4.citi.com/ats/url.aspx?cr=100169&wu=21&STID=1')
+	.done(function(data) {
+	    $('#loading-small').hide();
+	    var resp = $.parseJSON(data.match(/\{.*\}/)[0]);
+	    $.each(resp.pids.sort((function(a,b){return a - b})), function(i, pid) {
+		$("select[name=s_ct_product_id_ch] ").append("<option value='" + pid + "' >" + pid + "</option>");
+	    })
+	});
+}
+
+function pidOnchange() {
+	var pid=$("select[name=s_ct_product_id_ch]").val();
+	if(pid) {
+	    $('#loading-small').show();
+	    $("select[name=s_ax_creative_assignment] option:not(:first)").remove();
+	    $.get('https://fm.info4.citi.com/ats/url.aspx?cr=100169&wu=64&PID='+pid)
+	    .done(function(data) {
+		$('#loading-small').hide();
+		var resp = $.parseJSON(data.match(/\{.*\}/)[0]);
+		$.each(resp.cids.sort(), function(i, cid) {
+		    $("select[name=s_ax_creative_assignment]").append("<option value='" + cid + "' >" + cid + "</option>");
+		})
+	    });
+	}
+};
+
+
+function follow_through(code, cblock, retry) {
+    if(retry > 3)
+	return;
+
+    $.get('https://fm.info4.citi.com/ats/url.aspx?cr=100169&wu=28&ccd='+code)
+	.then(function(data) {
+		try {
+		    var resp = $.parseJSON(data.match(/\{.*\}/)[0]);
+		}
+		catch(err) {
+		    console.log("error on rest content:" + code);
+		    var dfr = new $.Deferred();
+		    return dfr.reject(this).promise();
+		}
+		if(resp) {
+		    if(resp.name) {
+			
+			if(resp.rid && cblock) {
+                            
+			    ccmp.content_block(resp.rid, function(data) {
+			    cblock.html(data.replace(/http:/g, 'https:'));});
+			}
+		    }
+		}
+	    })
+	.fail(function() {
+		console.log("retrying" + code);
+		follow_through(code, cblock, retry++);
+	    });
+}
+
+function formSubmit() {
+    var pid = '{(ct_product_id_ch)}';
+    var cid = '{(ax_creative_assignment)}';
+if (pid <10)
+{
+pid='0'+pid;
+}
+    if(pid && cid)
+	loadContent(pid, cid);
+}
+
+function loadContent(pid, cid) {
+   // $(".stream").hide();
+
+    $('.content').hide();
+    $('.content').empty();
+
+    $("select[name=s_ct_product_id_ch]").val('')
+    $("select[name=s_ax_creative_assignment]").val('');
+
+    $('#loading-small').show();
+
+
+    if(pid && cid) {
+	$.get('https://fm.info4.citi.com/ats/url.aspx?cr=100169&wu=63&pid=' + pid + '&caid=' + cid)
+	    .done(function(data) {
+		    var resp = $.parseJSON(data.match(/\{.*\}/)[0]);
+
+		    if(resp.pid && resp.cid) {
+			var streams = resp.stream.split('|');
+
+			
+			
+			$.each(streams, function (index, value) {
+			    var qstream = "'" + value + "'";
+			    $("<li></li>").append($("<a></a>", {text:value, href:'#', onclick:"streamOnclick("+qstream+")" })).appendTo($("#stream-list"));
+                           if(resp.globalheader) {
+                               
+				$('#'+ value +'-globalheader').show();
+				$('#'+ value +'-globalheader .content').show();
+				$('#'+ value +'-globalheader-title').html("<b>Global Header</b>: " + resp.globalheader);
+				follow_through(value + '_' + resp.globalheader, $('#'+ value +'-globalheader-html'), 0);
+			    }
+			    if(resp.preheader) {
+				$('#'+ value +'-preheader').show();
+				$('#'+ value +'-preheader .content').show();
+				$('#'+ value +'-preheader-title').html("<b>Preheader</b>: " + resp.preheader);
+				follow_through(value + '_' + resp.preheader, $('#'+ value +'-preheader-html'), 0);
+			    }
+			    if(resp.header) {
+				$('#'+ value +'-header').show();
+				$('#'+ value +'-header .content').show();
+				$('#'+ value +'-header-title').html("<b>Header</b>: " +resp.header);
+				follow_through(value + '_' + resp.header,  $('#'+ value +'-header-html'), 0);
+			    }
+			   if(resp.subheader) {
+				$('#'+ value +'-subheader').show();
+				$('#'+ value +'-subheader .content').show();
+				$('#'+ value +'-subheader-title').html("<b>SubHeader</b>: " +resp.subheader);
+				follow_through(value + '_' + resp.subheader, $('#'+ value +'-subheader-html'), 0);
+			    }			      
+			    if(resp.body) {
+				$('#'+ value +'-body').show();
+				$('#'+ value +'-body .content').show();
+				$('#'+ value +'-body-title').html("<b>Body</b>: " +resp.body);
+				follow_through(value + '_' + resp.body, $('#'+ value +'-body-html'), 0);
+			    }
+                            if(resp.subbody) {
+				$('#'+ value +'-subbody').show();
+				$('#'+ value +'-subbody .content').show();
+				$('#'+ value +'-subbody-title').html("<b>SubBody</b>: " +resp.subbody);
+				follow_through(value + '_' + resp.subbody,  $('#'+ value +'-subbody-html'), 0);
+			    }
+                            if(resp.rewardsbar) {
+				$('#'+ value +'-rewardsbar').show();
+				$('#'+ value +'-rewardsbar .content').show();
+				$('#'+ value +'-rewardsbar-title').html("<b>Rewards Bar</b>: " +resp.rewardsbar);
+				follow_through(value + '_' + resp.rewardsbar,  $('#'+ value +'-rewardsbar-html'), 0);
+			    }
+                            if(resp.disclosures) {
+				$('#'+ value +'-disclosures').show();
+				$('#'+ value +'-disclosures .content').show();
+				$('#'+ value +'-disclosures-title').html("<b>Disclosures</b>: " +resp.disclosures);
+				follow_through(value + '_' + resp.disclosures,  $('#'+ value +'-disclosures-html'), 0);
+			    }
+                            if(resp.botnavcont) {
+				$('#'+ value +'-botnavcont').show();
+				$('#'+ value +'-botnavcont .content').show();
+				$('#'+ value +'-botnavcont-title').html("<b>Bottom NavContent</b>: " +resp.botnavcont);
+				follow_through(value + '_' + resp.botnavcont,  $('#'+ value +'-botnavcont-html'), 0);
+			    }
+                            if(resp.mobileicon) {
+				$('#'+ value +'-mobileicon').show();
+				$('#'+ value +'-mobileicon .content').show();
+				$('#'+ value +'-mobileicon-title').html("<b>Mobile Social Icon</b>: " +resp.mobileicon);
+				follow_through(value + '_' + resp.mobileicon,  $('#'+ value +'-mobileicon-html'), 0);
+			    }
+                            if(resp.mobiledisc) {
+				$('#'+ value +'-mobiledisc').show();
+				$('#'+ value +'-mobiledisc.content').show();
+				$('#'+ value +'-mobiledisc-title').html("<b>Mobil Disclaimer</b>: " +resp.mobiledisc);
+				follow_through(value + '_' + resp.mobiledisc,  $('#'+ value +'-mobiledisc-html'), 0);
+			    }
+                           if(resp.logofooter) {
+				$('#'+ value +'-logofooter').show();
+				$('#'+ value +'-logofooter .content').show();
+				$('#'+ value +'-logofooter-title').html("<b>Logo_Footer</b>: " +resp.logofooter);
+				follow_through(value + '_' + resp.logofooter,  $('#'+ value +'-logofooter-html'), 0);
+			    }
+                           if(resp.botesz) {
+				$('#'+ value +'-botesz').show();
+				$('#'+ value +'-botesz .content').show();
+				$('#'+ value +'-botesz-title').html("<b>Bottom ESZ Content</b>: " +resp.botesz);
+				follow_through(value + '_' + resp.botesz,  $('#'+ value +'-botesz-html'), 0);
+			    }
+                             if(resp.footertop) {
+				$('#'+ value +'-footertop').show();
+				$('#'+ value +'-footertop .content').show();
+				$('#'+ value +'-footertop-title').html("<b>Footer Top</b>: " +resp.footertop);
+				follow_through(value + '_' + resp.footertop,  $('#'+ value +'-footertop-html'), 0);
+			    }
+                            if(resp.footertrade) {
+				$('#'+ value +'-footertrade').show();
+				$('#'+ value +'-footertrade .content').show();
+				$('#'+ value +'-footertrade-title').html("<b>Footer Trademark</b>: " +resp.footertrade);
+				follow_through(value + '_' + resp.footertrade,  $('#'+ value +'-footertrade-html'), 0);
+			    }
+    
+                            if(resp.footerbottom) {
+				$('#'+ value +'-footerbottom').show();
+				$('#'+ value +'-footerbottom .content').show();
+				$('#'+ value +'-footerbottom-title').html("<b>Footer Bottom</b>: " +resp.footerbottom);
+				follow_through(value + '_' + resp.footerbottom,  $('#'+ value +'-footerbottom-html'), 0);
+			    }
+    
+			      /* if(resp.legal) {
+				$('#'+ value +'-legal-title').html("<b>Legal</b>: " +resp.legal);
+				$('#'+ value +'-legal').show();
+				$('#'+ value +'-legal-title').show();
+				//$('#'+ value +'-legal-related').show();
+				$('#'+ value +'-legal-html').show();
+
+				follow_through(value + '_' + resp.legal,   $('#'+ value +'-legal-html'), 0);
+
+				var sublegals = $.grep(resp.sublegal, function(n, i) {return n});
+				if(sublegals.length > 1) {
+				    var clds = $('#'+value+'-legal-clds');
+				    $('#'+value+'-legal-clds').show();
+				    $.each(sublegals, function(indy, val) {
+					    var lgd = $("<div></div>").appendTo(clds);
+					    follow_through(value + '_' + val,  lgd, 0);
+				    })
+				}
+			    }*/
+
+			})
+var st= getParameterByName('st'); 
+//alert('Stream='+st);
+                        if(st=='AO_04'){
+
+                        $('#AO_04').show();
+                        $('#AW').hide();
+                        }
+                        else{
+                        $('#AW').show();
+                        $('#AO_04').hide();
+                         }
+			//$('#' + streams[0]).show();
+			$('#loading-small').hide();
+		    }
+	    });
+    }
+}
+
+function streamOnclick(stream) {
+    $('.stream').hide();
+    $('.active').removeClass('active');
+    $("#stream-list li:contains("+stream+")").addClass('active');
+    $('#'+stream).show();
+}
+</script>
+ <link rel="stylesheet" type="text/css" href="https://snamwpm.eccmp.com/wpm/100169/css/ccmpforms_style.css"/>
+<style type="text/css">
+#stream-tab {
+    display: inline-block;
+}
+#stream-tab ul {
+    list-style-type: none;
+    margin: 0px;
+    padding: 0px;
+}
+#stream-tab li {
+    background-color: #efefef;
+    display: inline-block;
+    line-height: 40px;
+    width: 120px;
+    height: 40px;
+    text-align: center;
+}
+#stream-tab a {
+    color:black;
+    text-decoration: none;
+}
+.active {
+    background-color: #FFF !important;
+}
+</style>
+
+
+<!--Style sheet finish-->  
+</head>
+<body style="width: 100% !important; -webkit-text-size-adjust:none; -ms-text-size-adjust: none; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; background:#ffffff;" onload="cookieCheck();formSubmit();">
+<div id="AO_04" class="stream">
+<div style="width:100%; font-family:Arial, Helvetica, sans-serif; font-size:11px; margin-left:auto; margin-right:auto;">
+  <table width="100%" align="center" border="0" cellspacing="0" cellpadding="0" class="main_content" bgcolor="#ffffff">
+    <tr>
+      <td align="center" valign="top"><table width="650" border="0" cellspacing="0" cellpadding="0" class="main_content">
+          <!--BEGIN GMAIL APP FIX TOP-->
+          <tr>
+            <td height="5" align="left" valign="top" style="line-height:0px; font-size:0px;" class="hide"><img class="hide" src="https://snamwpm.eccmp.com/wpm/100169/images/EE/spacer1x1.gif" height="1" width="600" alt="" style="max-height:1px; min-height:1px; display:block; width:600px; min-width:600px; margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; border-style: none; border-width: 0px;" border="0"/></td>
+          </tr>
+          <!--BEGIN GMAIL APP FIX --> 
+          <!--BEGIN HDR LOGO AND ESZ -->
+          <tr>
+            <td align="left" valign="top"><!-- Preheader placeholder -->
+              
+              <table width="650" border="0" align="center" cellpadding="0" cellspacing="0" class="glheadercontenttable">
+                <tr>
+                  <td style="font-size:1px; line-height:1px;"><img src="https://snamwpm.eccmp.com/wpm/503/GlobalHeadersFooters/1x2.gif" width="10" height="10" border="0" alt="" style="display:block;" /></td>
+                </tr>
+                <tr>
+                  <td><table width="630" border="0" align="center" cellpadding="0" cellspacing="0" class="glheadercontenttable2">
+                      <tr>
+                        <td align="left"><font style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; color:#999999;">
+
+    <div id="AO_04-preheader" style="display:none">
+	<div id="AO_04-preheader-title" class="title content"></div>
+	<div id="AO_04-preheader-related" class="related content"></div>
+	<div id="AO_04-preheader-html" ></div>
+    </div>
+</font></td>
+                      </tr>
+                    </table></td>
+                </tr>
+              </table>
+                            <!-- Preheader placeholder END--> 
+     <!-- Global Header START -->
+       <div id="AO_04-globalheader" style="display:none">
+	<div id="AO_04-globalheader-title" class="title content"></div>
+	<div id="AO_04-globalheader-related" class="related content"></div>
+	<div id="AO_04-globalheader-html" ></div>
+    </div>
+     <!-- Global Header END --> 
+     </td>
+          </tr>
+          <!--END HDR LOGO AND ESZ -->
+          
+       
+     <tr>
+            <td align="left" valign="top"><!--BEGIN Header-->
+<div id="AO_04-header" style="display:none">
+	<div id="AO_04-header-title" class="title content"></div>
+	<div id="AO_04-header-related" class="related content"></div>
+	<div id="AO_04-header-html" class="content"></div>
+    </div>
+</td>
+          </tr>
+<tr>
+            <td align="left" valign="top"><!--BEGIN Rewards-->
+
+<div id="AO_04-rewardsbar" style="display:none">
+	<div id="AO_04-rewardsbar-title" class="title content"></div>
+	<div id="AO_04-rewardsbar-related" class="related content"></div>
+	<div id="AO_04-rewardsbar-html" class="content"></div>
+    </div>
+</td>
+          </tr>
+  
+<tr>
+            <td align="left" valign="top"><!--BEGIN SubHeader-->
+<div id="AO_04-subheader" style="display:none">
+	<div id="AO_04-subheader-title" class="title content"></div>
+	<div id="AO_04-subheader-related" class="related content"></div>
+	<div id="AO_04-subheader-html" class="content"></div>
+    </div>
+</td>
+          </tr>
+
+     <tr>
+            <td align="left" valign="top"><!--BEGIN BDY -->
+    <div id="AO_04-body" style="display:none">
+	<div id="AO_04-body-title" class="title content"></div>
+	<div id="AO_04-body-related" class="related content"></div>
+	<div id="AO_04-body-html"></div>
+    </div><br/>
+ </td>
+          </tr>
+
+  <tr>
+            <td align="left" valign="top"><!--BEGIN SubBDY -->
+    <div id="AO_04-subbody" style="display:none">
+	<div id="AO_04-subbody-title" class="title content"></div>
+	<div id="AO_04-subbody-related" class="related content"></div>
+	<div id="AO_04-subbody-html"></div>
+    </div>
+ </td>
+          </tr>
+ 
+
+
+ <!--BEGIN GMAIL APP FIX BOTTOM-->
+          <tr>
+            <td height="20" align="left" valign="top" style="line-height:0px; font-size:0px;" class="hide"><img class="hide" src="https://snamwpm.eccmp.com/wpm/100169/images/EE/spacer1x1.gif" height="1" width="600" alt="" style="max-height:1px; min-height:1px; display:block; width:600px; min-width:600px; margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; border-style: none; border-width: 0px;" border="0"/></td>
+          </tr>
+          <!--BEGIN GMAIL APP FIX -->
+        </table>
+        
+      <!--Begin GLOBAL BOTTOM NAV -->
+
+         <div id="AO_04-botnavcont" style="display:none;">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AO_04-botnavcont-title" class="title content"></div>
+</td>
+</tr>
+</table>
+	<div id="AO_04-botnavcont-related" class="related content"></div>
+	<div id="AO_04-botnavcont-html" ></div>
+    </div> 
+                 
+              <!--End GLOBAL BOTTOM NAV--> 
+           <!-- Survey button suppression begin  - 
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable2">
+    <tr>
+      <td align="left">
+      <a href="https://survey3.sendyouropinions.com/CITIOPT?c=(ct_cl_tid)&amp;d=(MessageMergeTime||d:yyyy-MM-dd)&amp;mc=(ax_market_cell)&amp;ca=(ax_creative_assignment)&amp;pm=(ax_promoid)&amp;pd=(ct_product_id_ch)">
+      <img src="https://snamwpm.eccmp.com/wpm/503/GlobalHeadersFooters/04242015_CITI_AA_02.jpg" width="301" height="32" border="0" alt="" style="display:block;"/></a></td>
+      <td class="footer_hide"><img src="https://snamwpm.eccmp.com/wpm/503/GlobalHeadersFooters/1x2.gif" width="349" height="2" border="0" alt="" style="display:block;"/></td>
+    </tr>
+</table>
+<!-- spacing -->
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr>
+      <td><img src="https://snamwpm.eccmp.com/wpm/503/GlobalHeadersFooters/1x2.gif" width="1" height="30" border="0" alt="" style="display:block;"/></td>
+    </tr>
+</table>
+<!-- Survey button suppression end -->
+                                        
+              <!-- End Global survey --> 
+              
+              <!-- Begin GLOBAL SOCIAL -->
+              
+             <div id="AO_04-mobileicon" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AO_04-mobileicon-title" class="title content"></div>
+</td>
+</tr>
+</table>
+	<div id="AO_04-mobileicon-related" class="related content"></div>
+	<div id="AO_04-mobileicon-html" ></div>
+    </div>
+                        
+              <!-- End GLOBAL SOCIAL --> 
+              
+                   <!--Begin SOCDisc-->
+             <!--End SOCDisc-->
+                           
+              <!--BEGIN DISCLOSURE--> 
+              <div id="AO_04-disclosures" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AO_04-disclosures-title" class="title content"></div>
+</td></tr></table>
+	<div id="AO_04-disclosures-related" class="related content"></div>
+	<div id="AO_04-disclosures-html"></div>
+    </div>
+             
+              <!--END DISCLOSURE--> 
+                
+             <!-- Begin GLOBAL SOCIAL DISCLOSURE -->
+              
+                   <div id="AO_04-mobiledisc" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AO_04-mobiledisc-title" class="title content"></div>
+</td></tr></table>
+	<div id="AO_04-mobiledisc-related" class="related content"></div>
+	<div id="AO_04-mobiledisc-html" ></div>
+    </div>
+              
+              
+                        
+              <!-- End GLOBAL SOCIAL --> 
+                    
+                <!-- Begin Logo_footer--> 
+
+                           <div id="AO_04-logofooter" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AO_04-logofooter-title" class="title content"></div>
+</td></tr></table>
+	<div id="AO_04-logofooter-related" class="related content"></div>
+	<div id="AO_04-logofooter-html" ></div>
+    </div>
+              
+               
+              
+                <!-- End Logo footer --> 
+
+                    <!-- Start GLOBAL EMAIL SECURITY --> 
+              <!--email security zone-->
+              
+              <div id="AO_04-botesz" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AO_04-botesz-title" class="title content"></div>
+</td></tr></table>
+	<div id="AO_04-botesz-related" class="related content"></div>
+	<div id="AO_04-botesz-html" ></div>
+    </div>      
+              
+              <!--email security zone--> 
+                            
+              <!-- End GLOBAL EMAIL SECURITY --> 
+              
+              <!-- Begin GLOBAL FOOTER TOP-->
+              
+            <div id="AO_04-footertop" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AO_04-footertop-title" class="title content"></div>
+</td></tr></table>
+	<div id="AO_04-footertop-related" class="related content"></div>
+	<div id="AO_04-footertop-html" ></div>
+    </div>   
+                            
+              <!-- END GLOBAL FOOTER TOP--> 
+              
+              <!-- START TRADEMARKS FOOTER -->
+              
+        <div id="AO_04-footertrade" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AO_04-footertrade-title" class="title content"></div>
+</td></tr></table>
+	<div id="AO_04-footertrade-related" class="related content"></div>
+	<div id="AO_04-footertrade-html" ></div>
+    </div>
+                         
+              <!-- END TRADEMARKS FOOTER --> 
+              
+              <!-- START ADDITIONAL TRADEMARKS --> 
+              
+           
+              
+              <!-- END ADDITIONAL TRADEMARKS --> 
+              
+                                 
+              <!-- START FOOTER BOTTOM --> 
+              <div id="AO_04-footerbottom" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AO_04-footerbottom-title" class="title content"></div>
+</td></tr></table>
+	<div id="AO_04-footerbottom-related" class="related content"></div>
+	<div id="AO_04-footerbottom-html" ></div>
+    </div>
+             
+      <!-- END FOOTER BOTTOM -->
+        
+      
+  </td>
+    </tr>
+  </table>
+</div>
+</div>
+<div id="AW" class="stream">
+<div style="width:100%; font-family:Arial, Helvetica, sans-serif; font-size:11px; margin-left:auto; margin-right:auto;">
+  <table width="100%" align="center" border="0" cellspacing="0" cellpadding="0" class="main_content" bgcolor="#ffffff">
+    <tr>
+      <td align="center" valign="top"><table width="650" border="0" cellspacing="0" cellpadding="0" class="main_content">
+          <!--BEGIN GMAIL APP FIX TOP-->
+          <tr>
+            <td height="5" align="left" valign="top" style="line-height:0px; font-size:0px;" class="hide"><img class="hide" src="https://snamwpm.eccmp.com/wpm/100169/images/EE/spacer1x1.gif" height="1" width="600" alt="" style="max-height:1px; min-height:1px; display:block; width:600px; min-width:600px; margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; border-style: none; border-width: 0px;" border="0"/></td>
+          </tr>
+          <!--BEGIN GMAIL APP FIX --> 
+          <!--BEGIN HDR LOGO AND ESZ -->
+          <tr>
+            <td align="left" valign="top"><!-- Preheader placeholder -->
+              
+              <table width="650" border="0" align="center" cellpadding="0" cellspacing="0" class="glheadercontenttable">
+                <tr>
+                  <td style="font-size:1px; line-height:1px;"><img src="https://snamwpm.eccmp.com/wpm/503/GlobalHeadersFooters/1x2.gif" width="10" height="10" border="0" alt="" style="display:block;" /></td>
+                </tr>
+                <tr>
+                  <td><table width="630" border="0" align="center" cellpadding="0" cellspacing="0" class="glheadercontenttable2">
+                      <tr>
+                        <td align="left"><font style="font-family: Arial, Helvetica, sans-serif; font-size: 12px; color:#999999;">
+
+    <div id="AW-preheader" style="display:none">
+	<div id="AW-preheader-title" class="title content"></div>
+	<div id="AW-preheader-related" class="related content"></div>
+	<div id="AW-preheader-html" class="content"></div>
+    </div>
+</font></td>
+                      </tr>
+                    </table></td>
+                </tr>
+              </table>
+                            <!-- Preheader placeholder END--> 
+     <!-- Global Header START -->
+    <div id="AW-globalheader" style="display:none">
+	<div id="AW-globalheader-title" class="title content"></div>
+	<div id="AW-globalheader-related" class="related content"></div>
+	<div id="AW-globalheader-html" ></div>
+    </div>
+     <!-- Global Header END --> 
+     </td>
+          </tr>
+          <!--END HDR LOGO AND ESZ -->
+          
+       
+     <tr>
+            <td align="left" valign="top"><!--BEGIN Header-->
+    <div id="AW-header" style="display:none">
+	<div id="AW-header-title" class="title content"></div>
+	<div id="AW-header-related" class="related content"></div>
+	<div id="AW-header-html" class="content"></div>
+    </div>
+   </td>
+          </tr>
+<tr>
+            <td align="left" valign="top"><!--BEGIN Rewards-->
+
+<div id="AW-rewardsbar" style="display:none">
+	<div id="AW-rewardsbar-title" class="title content"></div>
+	<div id="AW-rewardsbar-related" class="related content"></div>
+	<div id="AW-rewardsbar-html" class="content"></div>
+    </div>
+</td>
+          </tr>
+
+    <tr>
+            <td align="left" valign="top"><!--BEGIN SubHeader-->
+    <div id="AW-subheader" style="display:none">
+	<div id="AW-subheader-title" class="title content"></div>
+	<div id="AW-subheader-related" class="related content"></div>
+	<div id="AW-subheader-html" class="content"></div>
+    </div>
+    </td>
+          </tr>
+  <tr>
+            <td align="left" valign="top"><!--BEGIN Body-->
+    <div id="AW-body" style="display:none">
+	<div id="AW-body-title" class="title content"></div>
+	<div id="AW-body-related" class="related content"></div>
+	<div id="AW-body-html" class="content box"></div>
+    </div>
+</td>
+          </tr>
+<tr>
+            <td align="left" valign="top"><!--BEGIN SubBody-->
+    <div id="AW-subbody" style="display:none">
+	<div id="AW-subbody-title" class="title content"></div>
+	<div id="AW-subbody-related" class="related content"></div>
+	<div id="AW-subbody-html" class="content"></div>
+    </div>
+</td>
+          </tr>
+<tr>
+            <td align="left" valign="top"><!--BEGIN Rewards-->
+  <div id="AW-rewardsbar" style="display:none">
+	<div id="AW-rewardsbar-title" class="title content"></div>
+	<div id="AW-rewardsbar-related" class="related content"></div>
+	<div id="AW-rewardsbar-html" class="content"></div>
+    </div>
+</td>
+          </tr>
+
+
+
+ <!--BEGIN GMAIL APP FIX BOTTOM-->
+          <tr>
+            <td height="20" align="left" valign="top" style="line-height:0px; font-size:0px;" class="hide"><img class="hide" src="https://snamwpm.eccmp.com/wpm/100169/images/EE/spacer1x1.gif" height="1" width="600" alt="" style="max-height:1px; min-height:1px; display:block; width:600px; min-width:600px; margin-top: 0px; margin-right: 0px; margin-bottom: 0px; margin-left: 0px; padding-top: 0px; padding-right: 0px; padding-bottom: 0px; padding-left: 0px; border-style: none; border-width: 0px;" border="0"/></td>
+          </tr>
+          <!--BEGIN GMAIL APP FIX -->
+        </table>
+        
+      <!--Begin GLOBAL BOTTOM NAV -->
+
+         <div id="AW-botnavcont" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AW-botnavcont-title" class="title content"></div>
+</td></tr></table>
+	<div id="AW-botnavcont-related" class="related content"></div>
+	<div id="AW-botnavcont-html" ></div>
+                           
+              <!--End GLOBAL BOTTOM NAV--> 
+           <!-- Survey button suppression begin  - 
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable2">
+    <tr>
+      <td align="left">
+      <a href="https://survey3.sendyouropinions.com/CITIOPT?c=(ct_cl_tid)&amp;d=(MessageMergeTime||d:yyyy-MM-dd)&amp;mc=(ax_market_cell)&amp;ca=(ax_creative_assignment)&amp;pm=(ax_promoid)&amp;pd=(ct_product_id_ch)">
+      <img src="https://snamwpm.eccmp.com/wpm/503/GlobalHeadersFooters/04242015_CITI_AA_02.jpg" width="301" height="32" border="0" alt="" style="display:block;"/></a></td>
+      <td class="footer_hide"><img src="https://snamwpm.eccmp.com/wpm/503/GlobalHeadersFooters/1x2.gif" width="349" height="2" border="0" alt="" style="display:block;"/></td>
+    </tr>
+</table>
+<!-- spacing -->
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr>
+      <td><img src="https://snamwpm.eccmp.com/wpm/503/GlobalHeadersFooters/1x2.gif" width="1" height="30" border="0" alt="" style="display:block;"/></td>
+    </tr>
+</table>
+<!-- Survey button suppression end -->
+                                        
+              <!-- End Global survey --> 
+              
+              <!-- Begin GLOBAL SOCIAL -->
+              
+                     <div id="AW-mobileicon" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AW-mobileicon-title" class="title content"></div>
+</td></tr></table>
+	<div id="AW-mobileicon-related" class="related content"></div>
+	<div id="AW-mobileicon-html" ></div>
+    </div>
+                        
+              <!-- End GLOBAL SOCIAL --> 
+              
+                   <!--Begin SOCDisc-->
+                   
+                   <!--End SOCDisc-->
+                           
+              <!--BEGIN DISCLOSURE--> 
+              
+            <div id="AW-disclosures" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AW-disclosures-title" class="title content"></div>
+</td></tr></table>
+	<div id="AW-disclosures-related" class="related content"></div>
+	<div id="AW-disclosures-html" class="content box"></div>
+	
+    </div>
+              
+              <!--END DISCLOSURE--> 
+                
+             <!-- Begin GLOBAL SOCIAL DISCLOSURE -->
+
+                  <div id="AW-mobiledisc" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AW-mobiledisc-title" class="title content"></div>
+</td></tr></table>
+	<div id="AW-mobiledisc-related" class="related content"></div>
+	<div id="AW-mobiledisc-html" ></div>
+    </div>
+              
+                        
+              <!-- End GLOBAL SOCIAL --> 
+                    
+                <!-- Begin Logo_footer--> 
+       
+         <div id="AW-logofooter" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AW-logofooter-title" class="title content"></div>
+</td></tr></table>
+	<div id="AW-logofooter-related" class="related content"></div>
+	<div id="AW-logofooter-html" ></div>
+    </div>
+             
+                <!-- End Logo footer --> 
+
+              
+              <!--email security zone-->
+                     <div id="AW-botesz" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AW-botesz-title" class="title content"></div>
+</td></tr></table>
+	<div id="AW-botesz-related" class="related content"></div>
+	<div id="AW-botesz-html" ></div>
+    </div> 
+
+              <!-- End GLOBAL EMAIL SECURITY --> 
+              
+              <!-- Begin GLOBAL FOOTER TOP-->
+              
+                  
+            <div id="AW-footertop" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AW-footertop-title" class="title content"></div>
+</td></tr></table>
+	<div id="AW-footertop-related" class="related content"></div>
+	<div id="AW-footertop-html" ></div>
+    </div> 
+                            
+              <!-- END GLOBAL FOOTER TOP--> 
+              
+              <!-- START TRADEMARKS FOOTER -->
+              
+                   <div id="AW-footertrade" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AW-footertrade-title" class="title content"></div>
+</td></tr></table>
+	<div id="AW-footertrade-related" class="related content"></div>
+	<div id="AW-footertrade-html" ></div>
+    </div>
+             
+                         
+              <!-- END TRADEMARKS FOOTER --> 
+              
+              <!-- START ADDITIONAL TRADEMARKS --> 
+              
+           
+              
+              <!-- END ADDITIONAL TRADEMARKS --> 
+              
+                                 
+              <!-- START FOOTER BOTTOM --> 
+              
+                    <div id="AW-footerbottom" style="display:none">
+<table width="650" border="0" cellspacing="0" cellpadding="0" align="center" class="footer_contenttable">
+    <tr> <td align="left" valign="top">
+	<div id="AW-footerbottom-title" class="title content"></div>
+</td></tr></table>
+	<div id="AW-footerbottom-related" class="related content"></div>
+	<div id="AW-footerbottom-html" ></div>
+    </div>
+              
+      <!-- END FOOTER BOTTOM -->
+        
+      
+  </td>
+    </tr>
+  </table>
+</div>
+</div>
+</body>
+</html>
