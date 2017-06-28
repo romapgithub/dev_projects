@@ -4,5 +4,6 @@
 
     <xsl:template match="/">
 	{"cids":[<xsl:for-each select="/Msg/Props/ct_product_id_ch_to_ee_pids/ct_product_id_ch_to_ee_pid[not(Prop[@prop_name = 'ax_creative_assignment']/@val=following::Prop[@prop_name = 'ax_creative_assignment']/@val)]"><xsl:choose><xsl:when test="position() = last()" >"<xsl:value-of select="Prop[@prop_name = 'ax_creative_assignment']/@val" />"</xsl:when><xsl:otherwise>"<xsl:value-of select="Prop[@prop_name = 'ax_creative_assignment']/@val" />",</xsl:otherwise></xsl:choose></xsl:for-each>]}
-    </xsl:template>
+   
+	</xsl:template>
 </xsl:stylesheet>
